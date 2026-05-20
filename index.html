@@ -67,9 +67,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <script>
+function shuffle(arr){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var tmp=a[i];a[i]=a[j];a[j]=tmp;
+  }
+  return a;
+}
+
 var cats=["Identitate si valoare","Relatia cu ceilalti","Relatia cu viata","Relatia cu sine"];
 
-var allQ=[
+var rawQ=[
   [
     {q:"Care dintre urmatoarele te descrie cel mai bine acum?",type:"q1",opts:[
       {t:"Simt ca trebuie sa dovedesc constant sau sa fac ce se asteapta de la mine ca sa fiu respectat si acceptat",s:"red"},
@@ -151,6 +160,13 @@ var allQ=[
     ]}
   ]
 ];
+
+// Shuffle options for each question at load time
+var allQ=rawQ.map(function(cat){
+  return cat.map(function(q){
+    return {q:q.q,type:q.type,opts:shuffle(q.opts)};
+  });
+});
 
 var msgs={
   red:{
