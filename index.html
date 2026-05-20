@@ -59,7 +59,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="options" id="options"></div>
   <div class="nav">
     <button class="btn" id="btn-back" onclick="goBack()">Inapoi</button>
-    <span class="step-count" id="step-count"></span>
+    
     <button class="btn btn-primary" id="btn-next" onclick="goNext()" disabled>Continua</button>
   </div>
 </div>
@@ -204,7 +204,7 @@ function render(){
   document.getElementById('prog').style.width=Math.round((cur/total)*100)+'%';
   document.getElementById('cat-label').textContent=cats[state.catIdx];
   document.getElementById('q-text').textContent=q.q;
-  document.getElementById('step-count').textContent=cur+' din '+total;
+  
   document.getElementById('btn-back').disabled=(state.catIdx===0&&state.qIdx===0);
   var sel=state.answers[state.catIdx][state.qIdx];
   document.getElementById('btn-next').disabled=sel===null;
