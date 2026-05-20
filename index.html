@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Energy Audit — Behind the Performance</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9f9f7;color:#1a1a1a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.card{background:#fff;border-radius:16px;padding:2.5rem 2rem;max-width:640px;width:100%;box-shadow:0 2px 20px rgba(0,0,0,0.08)}
+.audit-title{font-size:24px;font-weight:600;margin-bottom:4px}
+.audit-sub{font-size:14px;color:#888;margin-bottom:2rem}
+.progress-bar{height:4px;background:#eee;border-radius:2px;margin-bottom:2rem}
+.progress-fill{height:4px;background:#1D9E75;border-radius:2px;transition:width 0.3s}
+.cat-label{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem}
+.q-title{font-size:18px;font-weight:500;margin-bottom:1.5rem;line-height:1.6}
+.options{display:flex;flex-direction:column;gap:10px;margin-bottom:2rem}
+.opt{padding:14px 18px;border:1.5px solid #e8e8e8;border-radius:10px;cursor:pointer;font-size:15px;text-align:left;background:#fff;transition:all 0.15s;line-height:1.5;color:#1a1a1a}
+.opt:hover{background:#f5fdf9;border-color:#1D9E75}
+.opt.selected{border:2px solid #1D9E75;background:#edfaf4;color:#085041}
+.nav{display:flex;justify-content:space-between;align-items:center}
+.btn{padding:10px 24px;border-radius:8px;border:1.5px solid #e8e8e8;background:#fff;color:#1a1a1a;font-size:15px;cursor:pointer;transition:all 0.15s}
+.btn:hover{background:#f5f5f5}
+.btn-primary{background:#1D9E75;color:#fff;border-color:#1D9E75;font-weight:500}
+.btn-primary:hover{background:#178f68}
+.btn:disabled{opacity:0.3;cursor:not-allowed}
+.step-count{font-size:13px;color:#aaa}
+.results{max-width:640px;width:100%}
+.res-card{background:#fff;border-radius:16px;padding:2rem;margin-bottom:1rem;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+.res-intro{font-size:15px;color:#555;margin-bottom:1.5rem;line-height:1.7}
+.zone-card{background:#fff;border:1px solid #eee;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.zone-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem}
+.zone-name{font-size:15px;font-weight:500}
+.zone-score{font-size:13px;color:#888}
+.traffic{display:flex;gap:6px;margin-bottom:0.75rem}
+.dot{width:16px;height:16px;border-radius:50%;background:#e8e8e8}
+.dot-red{background:#E24B4A}
+.dot-amber{background:#EF9F27}
+.dot-green{background:#639922}
+.dot-dim{background:#e8e8e8}
+.dot-inactive{background:#ddd}
+.zone-msg{font-size:14px;color:#555;line-height:1.7}
+.final-box{background:#f5fdf9;border-radius:12px;padding:1.5rem;margin-top:1rem}
+.final-box p{font-size:15px;color:#1a1a1a;line-height:1.7;margin-bottom:1rem}
+.final-box p:last-of-type{margin-bottom:0}
+.cta-btn{display:block;width:100%;margin-top:1.5rem;padding:14px;background:#1D9E75;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;text-align:center;text-decoration:none}
+.cta-btn:hover{background:#178f68}
+</style>
+</head>
+<body>
+
+<div id="app">
+<div class="card" id="quiz-wrap">
+  <div class="audit-title">Energy Audit</div>
+  <div class="audit-sub">Behind the Performance</div>
+  <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+  <div class="cat-label" id="cat-label"></div>
+  <div class="q-title" id="q-text"></div>
+  <div class="options" id="options"></div>
+  <div class="nav">
+    <button class="btn" id="btn-back" onclick="goBack()">Inapoi</button>
+    <span class="step-count" id="step-count"></span>
+    <button class="btn btn-primary" id="btn-next" onclick="goNext()" disabled>Continua</button>
+  </div>
+</div>
+<div class="results" id="results-wrap" style="display:none"></div>
+</div>
+
+<script>
+var cats=["Identitate si valoare","Relatia cu ceilalti","Relatia cu viata","Relatia cu sine"];
+
+var allQ=[
+  [
+    {q:"Care dintre urmatoarele te descrie cel mai bine acum?",type:"q1",opts:[
+      {t:"Simt ca trebuie sa dovedesc constant sau sa fac ce se asteapta de la mine ca sa fiu respectat si acceptat",s:"red"},
+      {t:"Fac lucruri care nu sunt in responsabilitatea mea, dar simt ca nu am de ales",s:"amber"},
+      {t:"Stiu ce vreau dar frica de a nu fi suficient ma opreste",s:"green"},
+      {t:"Ma simt bine cu cine sunt si ce fac",s:"neutral"}
+    ]},
+    {q:"Cat iti afecteaza asta viata zilnica?",type:"q2",opts:[
+      {t:"E fundal permanent, nu stiu cum e altfel",s:10},
+      {t:"Imi afecteaza deciziile aproape zilnic",s:8},
+      {t:"Ma oboseste des, dar mai am si momente bune",s:5},
+      {t:"Apare uneori dar trece repede",s:2}
+    ]},
+    {q:"Cand apare aceasta stare, cat timp ramai in ea?",type:"q3",opts:[
+      {t:"E o stare de fond, raman in permanenta acolo",s:10},
+      {t:"O saptamana sau mai mult",s:8},
+      {t:"O zi sau doua",s:5},
+      {t:"Cateva ore si trece",s:2}
+    ]}
+  ],
+  [
+    {q:"Care dintre urmatoarele te descrie cel mai bine acum?",type:"q1",opts:[
+      {t:"Cand apare un gol sau o problema, sar sa il rezolv eu, asa ma afirm si asa avansez",s:"red"},
+      {t:"Simt ca daca nu sunt cel care rezolva sau livreaza devin invizibil",s:"amber"},
+      {t:"Stiu ca ma implic prea mult, dar uneori imi e greu sa ma retrag cand vad ca altii nu pot",s:"green"},
+      {t:"Ma implic atunci cand e nevoie, nu ca sa fiu vazut",s:"neutral"}
+    ]},
+    {q:"Cat te afecteaza asta in viata de zi cu zi?",type:"q2",opts:[
+      {t:"Ma epuizez constant si simt ca nimeni nu vede cat duc",s:10},
+      {t:"Relatiile din echipa sau acasa sunt dezechilibrate, dau mai mult decat primesc",s:8},
+      {t:"Uneori observ ca intru in tipar dar tot o fac",s:5},
+      {t:"Reusesc sa aleg cand ma implic, fara sa simt presiune",s:2}
+    ]},
+    {q:"Cand simti ca nu esti vazut sau apreciat, cat timp ramai in acea stare?",type:"q3",opts:[
+      {t:"E o stare de fond, raman in permanenta acolo",s:10},
+      {t:"O saptamana sau mai mult",s:8},
+      {t:"O zi sau doua",s:5},
+      {t:"Cateva ore si trece",s:2}
+    ]}
+  ],
+  [
+    {q:"Care dintre urmatoarele te descrie cel mai bine acum?",type:"q1",opts:[
+      {t:"Am nevoie sa stiu ca totul e sub control si ca am suficient pus deoparte, altfel nu ma pot relaxa",s:"red"},
+      {t:"Cand lucrurile nu merg cum ma asteptam sau planul se schimba, ma destabilizeaza mai mult decat ar trebui",s:"amber"},
+      {t:"Stiu ca sunt prea rigid cu asteptarile si controlul, dar asa ma simt in siguranta",s:"green"},
+      {t:"Ma simt ok cu incertitudinea si pot lasa lucrurile sa se desfasoare",s:"neutral"}
+    ]},
+    {q:"Cat te afecteaza asta zilnic?",type:"q2",opts:[
+      {t:"E modul meu de a functiona, nu stiu cum e altfel",s:10},
+      {t:"Cand ceva scapa de sub control sau asteptarile nu sunt indeplinite, simt ca ma prabusesc",s:8},
+      {t:"Uneori simt ca ma consuma, dar asa am invatat sa ma simt in siguranta",s:5},
+      {t:"Reusesc sa am incredere ca lucrurile se aseaza chiar si fara sa controlez",s:2}
+    ]},
+    {q:"Cand lucrurile nu merg cum te asteptai, cat timp ramai in acea stare?",type:"q3",opts:[
+      {t:"E o stare de fond, raman in permanenta acolo",s:10},
+      {t:"O saptamana sau mai mult",s:8},
+      {t:"O zi sau doua",s:5},
+      {t:"Cateva ore si revin",s:2}
+    ]}
+  ],
+  [
+    {q:"Care dintre urmatoarele te descrie cel mai bine acum?",type:"q1",opts:[
+      {t:"Merg inainte indiferent cum ma simt, durerea, oboseala sau semnalele corpului sunt obstacole de depasit",s:"red"},
+      {t:"Uneori ma opresc cand corpul sau emotiile tipa suficient de tare, dar de obicei le ignor cat pot",s:"amber"},
+      {t:"Stiu ca ar trebui sa ma ascult mai mult, dar nu stiu cum sau de unde sa incep",s:"green"},
+      {t:"Ma ascult si cand apare ceva in corp sau la nivel emotional stau cu asta inainte sa merg mai departe",s:"neutral"}
+    ]},
+    {q:"Cat te afecteaza asta?",type:"q2",opts:[
+      {t:"Ma trezesc epuizat, fara chef sau cu dureri fizice si nu inteleg de ce, desi fac tot ce trebuie",s:10},
+      {t:"Simt ca bateria mea se descarca mai repede decat se incarca si nu gasesc cauza",s:8},
+      {t:"Uneori observ ca evit sa ma uit la ce e in interiorul meu, dar ma intorc repede la exterior",s:5},
+      {t:"Am o relatie buna cu mine si cu ce simt",s:2}
+    ]},
+    {q:"Cand te simti gol, epuizat sau deconectat de tine, cat timp ramai in acea stare?",type:"q3",opts:[
+      {t:"E o stare de fond, raman in permanenta acolo",s:10},
+      {t:"O saptamana sau mai mult",s:8},
+      {t:"O zi sau doua",s:5},
+      {t:"Cateva ore si revin",s:2}
+    ]}
+  ]
+];
+
+var msgs={
+  red:{
+    0:"Simti ca trebuie sa dovedesti constant sau sa faci ce se asteapta de la tine ca sa fii respectat si acceptat. Asta e prezent aproape tot timpul in viata ta si cand apare poti petrece extrem de mult timp acolo, zile, saptamani sau e pur si simplu fundalul din care operezi fara sa realizezi. Energia pe care o consumi incercand sa fii suficient pentru ceilalti e unul dintre cele mai mari bottleneck-uri ale tale acum.",
+    1:"Simti ca locul tau printre ceilalti trebuie castigat prin ce faci si ce rezolvi. Fara asta devii invizibil. Asta e prezent aproape tot timpul si cand simti ca nu esti vazut poti petrece extrem de mult timp acolo, zile, saptamani. Te epuizezi ducand mai mult decat ti se cere si nu intelegi de ce tot nu e suficient.",
+    2:"Ai nevoie sa stii ca totul e sub control si ca ai suficient pus deoparte, altfel nu te poti relaxa. Asta nu e o optiune pentru tine, e supravietuire. Planifici, strangi si verifici constant fara sa realizezi cat energie consuma asta din tine zilnic.",
+    3:"Mergi inainte indiferent cum te simti. Durerea, oboseala si semnalele corpului sunt obstacole de depasit, nu mesaje de ascultat. Te trezesti epuizat sau fara chef si nu intelegi de ce, desi faci tot ce trebuie. Corpul tau vorbeste si asta iti ia energie fara return."
+  },
+  amber:{
+    0:"Uneori simti presiunea de a performa sau de a indeplini asteptari care nu sunt complet ale tale. Te oboseste des si cand apare poti petrece zile acolo inainte sa revii. Inca mai ai momente in care esti tu, dar tiparul e activ si iti consuma energie.",
+    1:"Uneori simti ca trebuie sa fii util sau sa rezolvi ca sa fii prezent si apreciat. Cand simti ca nu esti vazut poti petrece zile acolo inainte sa revii. Tiparul e activ, dar mai ai momente in care esti prezent fara sa simti nevoia sa dovedesti ceva.",
+    2:"Stii ca esti uneori prea rigid cu planurile si asteptarile, dar asa te simti in siguranta. Cand lucrurile nu merg cum te asteptai poti petrece zile acolo inainte sa te reechilibrezi. Tiparul e activ, dar mai ai momente in care poti lasa lucrurile sa se desfasoare.",
+    3:"Uneori te opresti sa te asculti, dar exteriorul castiga de obicei. Cand apare golul sau epuizarea poti petrece zile acolo inainte sa revii. Conexiunea cu tine e intermitenta si iti consuma energie sa o mentii."
+  },
+  green:{
+    0:"Aceasta zona nu iti consuma energia semnificativ acum. Ai o relatie sanatoasa cu cine esti si ce faci, si cand apare presiunea trece repede.",
+    1:"Aceasta zona nu iti consuma energia semnificativ acum. Te simti acceptat si prezent fara sa simti nevoia sa castigi locul tau printre ceilalti.",
+    2:"Aceasta zona nu iti consuma energia semnificativ acum. Ai incredere in cum se desfasoara lucrurile si incertitudinea nu e un inamic pentru tine.",
+    3:"Aceasta zona nu iti consuma energia semnificativ acum. Ai o relatie buna cu tine si stii sa stai cu ce apare inainte sa mergi mai departe."
+  },
+  neutral:{
+    0:"Aceasta zona nu iti ia energie acum. Nu e un bottleneck activ in performanta ta.",
+    1:"Aceasta zona nu iti ia energie acum. Nu e un bottleneck activ in performanta ta.",
+    2:"Aceasta zona nu iti ia energie acum. Nu e un bottleneck activ in performanta ta.",
+    3:"Aceasta zona nu iti ia energie acum. Nu e un bottleneck activ in performanta ta."
+  }
+};
+
+var state={catIdx:0,qIdx:0,colors:["neutral","neutral","neutral","neutral"],answers:[[null,null,null],[null,null,null],[null,null,null],[null,null,null]],scores:[0,0,0,0]};
+
+function render(){
+  var q=allQ[state.catIdx][state.qIdx];
+  var total=calcTotal();
+  var cur=calcCurrent()+1;
+  document.getElementById('prog').style.width=Math.round((cur/total)*100)+'%';
+  document.getElementById('cat-label').textContent=cats[state.catIdx];
+  document.getElementById('q-text').textContent=q.q;
+  document.getElementById('step-count').textContent=cur+' din '+total;
+  document.getElementById('btn-back').disabled=(state.catIdx===0&&state.qIdx===0);
+  var sel=state.answers[state.catIdx][state.qIdx];
+  document.getElementById('btn-next').disabled=sel===null;
+  document.getElementById('btn-next').textContent=isLast(sel)?'Vezi rezultatele':'Continua';
+  var opts=document.getElementById('options');
+  opts.innerHTML='';
+  q.opts.forEach(function(o,i){
+    var btn=document.createElement('button');
+    btn.className='opt'+(sel===i?' selected':'');
+    btn.textContent=o.t;
+    btn.onclick=(function(idx){return function(){selectOpt(idx);};})(i);
+    opts.appendChild(btn);
+  });
+}
+
+function calcTotal(){
+  var t=4;
+  for(var i=0;i<4;i++){if(state.colors[i]!=="neutral")t+=2;}
+  return t;
+}
+
+function calcCurrent(){
+  var c=0;
+  for(var i=0;i<state.catIdx;i++){c++;if(state.colors[i]!=="neutral")c+=2;}
+  c+=state.qIdx;
+  return c;
+}
+
+function isLast(sel){
+  if(state.catIdx===3){
+    if(state.qIdx===2)return true;
+    if(state.qIdx===0&&sel!==null&&allQ[3][0].opts[sel].s==="neutral")return true;
+  }
+  return false;
+}
+
+function selectOpt(i){
+  state.answers[state.catIdx][state.qIdx]=i;
+  if(state.qIdx===0)state.colors[state.catIdx]=allQ[state.catIdx][0].opts[i].s;
+  if(state.qIdx===1||state.qIdx===2){
+    state.scores[state.catIdx]=
+      (state.answers[state.catIdx][1]!==null?allQ[state.catIdx][1].opts[state.answers[state.catIdx][1]].s:0)+
+      (state.answers[state.catIdx][2]!==null?allQ[state.catIdx][2].opts[state.answers[state.catIdx][2]].s:0);
+  }
+  document.getElementById('btn-next').disabled=false;
+  document.getElementById('btn-next').textContent=isLast(i)?'Vezi rezultatele':'Continua';
+  render();
+}
+
+function goNext(){
+  var sel=state.answers[state.catIdx][state.qIdx];
+  if(sel===null)return;
+  if(isLast(sel)){showResults();return;}
+  if(state.qIdx===0){
+    var color=allQ[state.catIdx][0].opts[sel].s;
+    state.colors[state.catIdx]=color;
+    if(color==="neutral"){if(state.catIdx<3){state.catIdx++;state.qIdx=0;}else showResults();}
+    else state.qIdx=1;
+  } else if(state.qIdx===1){
+    state.qIdx=2;
+  } else {
+    state.scores[state.catIdx]=
+      (state.answers[state.catIdx][1]!==null?allQ[state.catIdx][1].opts[state.answers[state.catIdx][1]].s:0)+
+      (state.answers[state.catIdx][2]!==null?allQ[state.catIdx][2].opts[state.answers[state.catIdx][2]].s:0);
+    if(state.catIdx<3){state.catIdx++;state.qIdx=0;}else showResults();
+  }
+  render();
+}
+
+function goBack(){
+  if(state.catIdx===0&&state.qIdx===0)return;
+  if(state.qIdx>0){state.qIdx--;}
+  else{state.catIdx--;state.qIdx=state.colors[state.catIdx]==="neutral"?0:2;}
+  render();
+}
+
+function getDots(color){
+  if(color==="red")return'<div class="dot dot-red"></div><div class="dot dot-dim"></div><div class="dot dot-dim"></div>';
+  if(color==="amber")return'<div class="dot dot-dim"></div><div class="dot dot-amber"></div><div class="dot dot-dim"></div>';
+  if(color==="green")return'<div class="dot dot-dim"></div><div class="dot dot-dim"></div><div class="dot dot-green"></div>';
+  return'<div class="dot dot-inactive"></div>';
+}
+
+function getLabel(color){
+  if(color==="red")return"Impact major";
+  if(color==="amber")return"Zona activa";
+  if(color==="green")return"Zona echilibrata";
+  return"Zona inactiva";
+}
+
+function showResults(){
+  document.getElementById('quiz-wrap').style.display='none';
+  var rw=document.getElementById('results-wrap');
+  rw.style.display='block';
+  var html='<div class="res-card"><p class="res-intro">Iata harta ta energetica. Fiecare zona reflecta cat energie investesti fara return si unde esti cel mai blocat in performanta ta.</p>';
+  for(var i=0;i<4;i++){
+    var color=state.colors[i];
+    var scoreText=color!=="neutral"?(state.scores[i]+" / 20 &mdash; "):"";
+    html+='<div class="zone-card"><div class="zone-header"><span class="zone-name">'+cats[i]+'</span><span class="zone-score">'+scoreText+getLabel(color)+'</span></div><div class="traffic">'+getDots(color)+'</div><div class="zone-msg">'+msgs[color][i]+'</div></div>';
+  }
+  var activeColors=state.colors.filter(function(c){return c!=="neutral";});
+  var hasRed=activeColors.indexOf("red")>-1;
+  var hasAmber=activeColors.indexOf("amber")>-1;
+  var intro=hasRed||hasAmber?"Zonele active pe care le-ai identificat nu sunt defecte. Sunt locurile unde ai invatat cum sa supravietuiesti si sa te simti protejat. Exact acolo, in spatele fiecarui sistem de protectie, sta o energie care asteapta sa fie eliberata.":"Zonele pe care le-ai identificat arata un sistem relativ echilibrat. Chiar si asa, in spatele oricarui tipar activ sta energie care poate fi eliberata.";
+  html+='<div class="final-box">'+
+    '<p>'+intro+'</p>'+
+    '<p>Nu e vorba sa distrugi ceva, sa te repari sau sa te vindeci. E vorba sa vezi ce a incercat sa te protejeze, sa ii intelegi rolul si sa creezi suficienta siguranta incat energia blocata in spatele lui sa poata curge din nou.</p>'+
+    '<p>In spatele fricii de vulnerabilitate poate fi iubire. In spatele controlului poate fi creativitate. In spatele oboselii poate fi o forta vitala pe care nu ai mai simtit-o de mult.</p>'+
+    '<p>In convorbirea de 30 de minute vom merge impreuna dincolo de situatii si de oamenii implicati in ele, pana la cuvintele care descrie cu adevarat starea ta. O data ce le spui, simti ca totul e despre tine, nu despre ce s-a intamplat sau cine a facut ce. Acolo e radacina si acolo e si energia care asteapta sa fie eliberata.</p>'+
+    '<a class="cta-btn" href="https://thebecomingfield.com" target="_blank">Rezerva convorbirea gratuita &rarr;</a>'+
+    '</div></div>';
+  rw.innerHTML=html;
+}
+
+render();
+</script>
+</body>
+</html>
