@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Energy Audit — Behind the Performance</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9f9f7;color:#1a1a1a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.card{background:#fff;border-radius:16px;padding:2.5rem 2rem;max-width:640px;width:100%;box-shadow:0 2px 20px rgba(0,0,0,0.08)}
+.audit-title{font-size:24px;font-weight:600;margin-bottom:4px}
+.audit-sub{font-size:14px;color:#888;margin-bottom:2rem}
+.progress-bar{height:4px;background:#eee;border-radius:2px;margin-bottom:2rem}
+.progress-fill{height:4px;background:#1D9E75;border-radius:2px;transition:width 0.3s}
+.cat-label{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem}
+.q-title{font-size:18px;font-weight:500;margin-bottom:1.5rem;line-height:1.6}
+.options{display:flex;flex-direction:column;gap:10px;margin-bottom:2rem}
+.opt{padding:14px 18px;border:1.5px solid #e8e8e8;border-radius:10px;cursor:pointer;font-size:15px;text-align:left;background:#fff;transition:all 0.15s;line-height:1.5;color:#1a1a1a}
+.opt:hover{background:#f5fdf9;border-color:#1D9E75}
+.opt.selected{border:2px solid #1D9E75;background:#edfaf4;color:#085041}
+.nav{display:flex;justify-content:space-between;align-items:center}
+.btn{padding:10px 24px;border-radius:8px;border:1.5px solid #e8e8e8;background:#fff;color:#1a1a1a;font-size:15px;cursor:pointer;transition:all 0.15s}
+.btn:hover{background:#f5f5f5}
+.btn-primary{background:#1D9E75;color:#fff;border-color:#1D9E75;font-weight:500}
+.btn-primary:hover{background:#178f68}
+.btn:disabled{opacity:0.3;cursor:not-allowed}
+.step-count{font-size:13px;color:#aaa}
+.results{max-width:640px;width:100%}
+.res-card{background:#fff;border-radius:16px;padding:2rem;margin-bottom:1rem;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+.res-intro{font-size:15px;color:#555;margin-bottom:1.5rem;line-height:1.7}
+.zone-card{background:#fff;border:1px solid #eee;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.zone-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem}
+.zone-name{font-size:15px;font-weight:500}
+.zone-score{font-size:13px;color:#888}
+.traffic{display:flex;gap:6px;margin-bottom:0.75rem}
+.dot{width:16px;height:16px;border-radius:50%;background:#e8e8e8}
+.dot-red{background:#E24B4A}
+.dot-amber{background:#EF9F27}
+.dot-green{background:#639922}
+.dot-dim{background:#e8e8e8}
+.dot-inactive{background:#ddd}
+.zone-msg{font-size:14px;color:#555;line-height:1.7}
+.final-box{background:#f5fdf9;border-radius:12px;padding:1.5rem;margin-top:1rem}
+.final-box p{font-size:15px;color:#1a1a1a;line-height:1.7;margin-bottom:1rem}
+.final-box p:last-of-type{margin-bottom:0}
+.cta-btn{display:block;width:100%;margin-top:1.5rem;padding:14px;background:#1D9E75;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;text-align:center;text-decoration:none}
+.cta-btn:hover{background:#178f68}
+</style>
+</head>
+<body>
+
+<div id="app">
+<div class="card" id="quiz-wrap">
+  <div class="audit-title">Energy Audit</div>
+  <div class="audit-sub">Behind the Performance</div>
+  <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+  <div class="cat-label" id="cat-label"></div>
+  <div class="q-title" id="q-text"></div>
+  <div class="options" id="options"></div>
+  <div class="nav">
+    <button class="btn" id="btn-back" onclick="goBack()">Back</button>
+    
+    <button class="btn btn-primary" id="btn-next" onclick="goNext()" disabled>Continue</button>
+  </div>
+</div>
+<div class="results" id="results-wrap" style="display:none"></div>
+</div>
+
+<script>
+function shuffle(arr){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var tmp=a[i];a[i]=a[j];a[j]=tmp;
+  }
+  return a;
+}
+
+var cats=["Identity and value","Relationship with others","Relationship with life","Relationship with self"];
+
+var rawQ=[
+  [
+    {q:"Which of the following best describes you right now?",type:"q1",opts:[
+      {t:"I feel I constantly have to prove myself or do what is expected of me in order to be respected and accepted",s:"red"},
+      {t:"I do things that aren’t my responsibility, but I feel I have no choice",s:"amber"},
+      {t:"I know what I want, but the fear of not being enough holds me back",s:"green"},
+      {t:"I feel at peace with who I am and what I do",s:"neutral"}
+    ]},
+    {q:"How much does this affect your daily life?",type:"q2",opts:[
+      {t:"It’s a constant background, I don’t know any other way",s:10},
+      {t:"It affects my decisions almost every day",s:8},
+      {t:"It tires me often, but I still have good moments",s:5},
+      {t:"It shows up sometimes but passes quickly",s:2}
+    ]},
+    {q:"When this state appears, how long do you stay in it?",type:"q3",opts:[
+      {t:"It’s a background state, I’m permanently there",s:10},
+      {t:"A week or more",s:8},
+      {t:"A day or two",s:5},
+      {t:"A few hours and it passes",s:2}
+    ]}
+  ],
+  [
+    {q:"Which of the following best describes you right now?",type:"q1",opts:[
+      {t:"When a gap or a problem appears, I jump in to solve it — that’s how I assert myself and move forward",s:"red"},
+      {t:"I feel that if I’m not the one who solves or delivers, I become invisible",s:"amber"},
+      {t:"I know I get too involved, but sometimes it’s hard to step back when I see others can’t cope",s:"green"},
+      {t:"I get involved when needed, not to be seen",s:"neutral"}
+    ]},
+    {q:"How much does this affect your day-to-day life?",type:"q2",opts:[
+      {t:"I constantly exhaust myself and feel no one sees how much I carry",s:10},
+      {t:"My relationships at work or at home are unbalanced — I give more than I receive",s:8},
+      {t:"Sometimes I notice I fall into the pattern but do it anyway",s:5},
+      {t:"I manage to choose when to get involved, without feeling pressure",s:2}
+    ]},
+    {q:"When you feel unseen or unappreciated, how long do you stay in that state?",type:"q3",opts:[
+      {t:"It’s a background state, I’m permanently there",s:10},
+      {t:"A week or more",s:8},
+      {t:"A day or two",s:5},
+      {t:"A few hours and it passes",s:2}
+    ]}
+  ],
+  [
+    {q:"Which of the following best describes you right now?",type:"q1",opts:[
+      {t:"I need to know everything is under control and that I have enough set aside, otherwise I can’t relax",s:"red"},
+      {t:"When things don’t go as I expected or the plan changes, it destabilizes me more than it should",s:"amber"},
+      {t:"I know I’m too rigid with expectations and control, but that’s how I feel safe",s:"green"},
+      {t:"I’m okay with uncertainty and can let things unfold",s:"neutral"}
+    ]},
+    {q:"How much does this affect you daily?",type:"q2",opts:[
+      {t:"It’s my way of functioning, I don’t know any other way",s:10},
+      {t:"When something slips out of control or expectations aren’t met, I feel like I’m collapsing",s:8},
+      {t:"Sometimes I feel it consumes me, but that’s how I learned to feel safe",s:5},
+      {t:"I manage to trust that things settle even without me controlling them",s:2}
+    ]},
+    {q:"When things don’t go as you expected, how long do you stay in that state?",type:"q3",opts:[
+      {t:"It’s a background state, I’m permanently there",s:10},
+      {t:"A week or more",s:8},
+      {t:"A day or two",s:5},
+      {t:"A few hours and I recover",s:2}
+    ]}
+  ],
+  [
+    {q:"Which of the following best describes you right now?",type:"q1",opts:[
+      {t:"I push forward no matter how I feel — pain, tiredness, or the body’s signals are obstacles to overcome",s:"red"},
+      {t:"Sometimes I stop when my body or emotions scream loud enough, but usually I ignore them as long as I can",s:"amber"},
+      {t:"I know I should listen to myself more, but I don’t know how or where to start",s:"green"},
+      {t:"I listen to myself, and when something arises in my body or emotions I stay with it before moving on",s:"neutral"}
+    ]},
+    {q:"How much does this affect you?",type:"q2",opts:[
+      {t:"I wake up exhausted, without energy or with physical aches, and I don’t understand why, even though I do everything right",s:10},
+      {t:"I feel my battery drains faster than it charges and I can’t find the cause",s:8},
+      {t:"Sometimes I notice I avoid looking at what’s inside me, but I quickly turn back to the outside",s:5},
+      {t:"I have a good relationship with myself and with what I feel",s:2}
+    ]},
+    {q:"When you feel empty, exhausted, or disconnected from yourself, how long do you stay in that state?",type:"q3",opts:[
+      {t:"It’s a background state, I’m permanently there",s:10},
+      {t:"A week or more",s:8},
+      {t:"A day or two",s:5},
+      {t:"A few hours and I recover",s:2}
+    ]}
+  ]
+];
+
+// Shuffle options for each question at load time
+var allQ=rawQ.map(function(cat){
+  return cat.map(function(q){
+    return {q:q.q,type:q.type,opts:shuffle(q.opts)};
+  });
+});
+
+var msgs={
+  red:{
+    0:"You feel you constantly have to prove yourself or do what is expected of you in order to be respected and accepted. This is present almost all the time in your life, and when it appears you can spend an enormous amount of time there — days, weeks — or it’s simply the background you operate from without realizing it. The energy you spend trying to be enough for others is one of your biggest bottlenecks right now.",
+    1:"You feel your place among others has to be earned through what you do and what you solve. Without that, you become invisible. This is present almost all the time, and when you feel unseen you can spend an enormous amount of time there — days, weeks. You exhaust yourself carrying more than is asked of you, and you don’t understand why it still isn’t enough.",
+    2:"You need to know everything is under control and that you have enough set aside, otherwise you can’t relax. This isn’t a choice for you, it’s survival. You plan, gather, and check constantly without realizing how much energy this drains from you every day.",
+    3:"You push forward no matter how you feel. Pain, tiredness, and your body’s signals are obstacles to overcome, not messages to listen to. You wake up exhausted or without energy and don’t understand why, even though you do everything right. Your body is speaking, and this drains your energy with no return."
+  },
+  amber:{
+    0:"Sometimes you feel the pressure to perform or to meet expectations that aren’t entirely your own. It tires you often, and when it appears you can spend days there before you recover. You still have moments where you’re yourself, but the pattern is active and it drains your energy.",
+    1:"Sometimes you feel you have to be useful or to fix things in order to be present and appreciated. When you feel unseen, you can spend days there before you recover. The pattern is active, but you still have moments where you’re present without feeling the need to prove anything.",
+    2:"You know you’re sometimes too rigid with plans and expectations, but that’s how you feel safe. When things don’t go as you expected, you can spend days there before you rebalance. The pattern is active, but you still have moments where you can let things unfold.",
+    3:"Sometimes you stop to listen to yourself, but the outside usually wins. When emptiness or exhaustion appears, you can spend days there before you recover. Your connection with yourself is intermittent, and it drains energy to maintain it."
+  },
+  green:{
+    0:"This area isn’t draining your energy significantly right now. You have a healthy relationship with who you are and what you do, and when pressure appears it passes quickly.",
+    1:"This area isn’t draining your energy significantly right now. You feel accepted and present without feeling the need to earn your place among others.",
+    2:"This area isn’t draining your energy significantly right now. You trust how things unfold, and uncertainty isn’t an enemy to you.",
+    3:"This area isn’t draining your energy significantly right now. You have a good relationship with yourself and know how to stay with what arises before moving on."
+  },
+  neutral:{
+    0:"This area isn’t taking energy from you right now. It’s not an active bottleneck in your performance.",
+    1:"This area isn’t taking energy from you right now. It’s not an active bottleneck in your performance.",
+    2:"This area isn’t taking energy from you right now. It’s not an active bottleneck in your performance.",
+    3:"This area isn’t taking energy from you right now. It’s not an active bottleneck in your performance."
+  }
+};
+
+var state={catIdx:0,qIdx:0,colors:["neutral","neutral","neutral","neutral"],answers:[[null,null,null],[null,null,null],[null,null,null],[null,null,null]],scores:[0,0,0,0]};
+
+function render(){
+  var q=allQ[state.catIdx][state.qIdx];
+  var total=calcTotal();
+  var cur=calcCurrent()+1;
+  document.getElementById('prog').style.width=Math.round((cur/total)*100)+'%';
+  document.getElementById('cat-label').textContent=cats[state.catIdx];
+  document.getElementById('q-text').textContent=q.q;
+  
+  document.getElementById('btn-back').disabled=(state.catIdx===0&&state.qIdx===0);
+  var sel=state.answers[state.catIdx][state.qIdx];
+  document.getElementById('btn-next').disabled=sel===null;
+  document.getElementById('btn-next').textContent=isLast(sel)?'See results':'Continue';
+  var opts=document.getElementById('options');
+  opts.innerHTML='';
+  q.opts.forEach(function(o,i){
+    var btn=document.createElement('button');
+    btn.className='opt'+(sel===i?' selected':'');
+    btn.textContent=o.t;
+    btn.onclick=(function(idx){return function(){selectOpt(idx);};})(i);
+    opts.appendChild(btn);
+  });
+}
+
+function calcTotal(){
+  var t=4;
+  for(var i=0;i<4;i++){if(state.colors[i]!=="neutral")t+=2;}
+  return t;
+}
+
+function calcCurrent(){
+  var c=0;
+  for(var i=0;i<state.catIdx;i++){c++;if(state.colors[i]!=="neutral")c+=2;}
+  c+=state.qIdx;
+  return c;
+}
+
+function isLast(sel){
+  if(state.catIdx===3){
+    if(state.qIdx===2)return true;
+    if(state.qIdx===0&&sel!==null&&allQ[3][0].opts[sel].s==="neutral")return true;
+  }
+  return false;
+}
+
+function selectOpt(i){
+  state.answers[state.catIdx][state.qIdx]=i;
+  if(state.qIdx===0)state.colors[state.catIdx]=allQ[state.catIdx][0].opts[i].s;
+  if(state.qIdx===1||state.qIdx===2){
+    state.scores[state.catIdx]=
+      (state.answers[state.catIdx][1]!==null?allQ[state.catIdx][1].opts[state.answers[state.catIdx][1]].s:0)+
+      (state.answers[state.catIdx][2]!==null?allQ[state.catIdx][2].opts[state.answers[state.catIdx][2]].s:0);
+  }
+  document.getElementById('btn-next').disabled=false;
+  document.getElementById('btn-next').textContent=isLast(i)?'See results':'Continue';
+  render();
+}
+
+function goNext(){
+  var sel=state.answers[state.catIdx][state.qIdx];
+  if(sel===null)return;
+  if(isLast(sel)){showResults();return;}
+  if(state.qIdx===0){
+    var color=allQ[state.catIdx][0].opts[sel].s;
+    state.colors[state.catIdx]=color;
+    if(color==="neutral"){if(state.catIdx<3){state.catIdx++;state.qIdx=0;}else showResults();}
+    else state.qIdx=1;
+  } else if(state.qIdx===1){
+    state.qIdx=2;
+  } else {
+    state.scores[state.catIdx]=
+      (state.answers[state.catIdx][1]!==null?allQ[state.catIdx][1].opts[state.answers[state.catIdx][1]].s:0)+
+      (state.answers[state.catIdx][2]!==null?allQ[state.catIdx][2].opts[state.answers[state.catIdx][2]].s:0);
+    if(state.catIdx<3){state.catIdx++;state.qIdx=0;}else showResults();
+  }
+  render();
+}
+
+function goBack(){
+  if(state.catIdx===0&&state.qIdx===0)return;
+  if(state.qIdx>0){state.qIdx--;}
+  else{state.catIdx--;state.qIdx=state.colors[state.catIdx]==="neutral"?0:2;}
+  render();
+}
+
+function getDots(color){
+  if(color==="red")return'<div class="dot dot-red"></div><div class="dot dot-dim"></div><div class="dot dot-dim"></div>';
+  if(color==="amber")return'<div class="dot dot-dim"></div><div class="dot dot-amber"></div><div class="dot dot-dim"></div>';
+  if(color==="green")return'<div class="dot dot-dim"></div><div class="dot dot-dim"></div><div class="dot dot-green"></div>';
+  return'<div class="dot dot-inactive"></div>';
+}
+
+function getLabel(color){
+  if(color==="red")return"Major impact";
+  if(color==="amber")return"Active area";
+  if(color==="green")return"Balanced area";
+  return"Inactive area";
+}
+
+function showResults(){
+  document.getElementById('quiz-wrap').style.display='none';
+  var rw=document.getElementById('results-wrap');
+  rw.style.display='block';
+  var html='<div class="res-card"><p class="res-intro">Here is your energy map. Each area reflects how much energy you invest without return and where you’re most stuck in your performance.</p>';
+  for(var i=0;i<4;i++){
+    var color=state.colors[i];
+    var scoreText=color!=="neutral"?(state.scores[i]+" / 20 &mdash; "):"";
+    html+='<div class="zone-card"><div class="zone-header"><span class="zone-name">'+cats[i]+'</span><span class="zone-score">'+scoreText+getLabel(color)+'</span></div><div class="traffic">'+getDots(color)+'</div><div class="zone-msg">'+msgs[color][i]+'</div></div>';
+  }
+  var activeColors=state.colors.filter(function(c){return c!=="neutral";});
+  var hasRed=activeColors.indexOf("red")>-1;
+  var hasAmber=activeColors.indexOf("amber")>-1;
+  var intro=hasRed||hasAmber?"The active areas you’ve identified are not flaws. They’re the places where you learned how to survive and to feel protected. Right there, behind each protection system, lies an energy waiting to be released.":"The areas you’ve identified show a relatively balanced system. Even so, behind any active pattern lies energy that can be released.";
+  html+='<div class="final-box">'+
+    '<p>'+intro+'</p>'+
+    '<p>It’s not about destroying something, fixing yourself, or healing yourself. It’s about seeing what tried to protect you, understanding its role, and creating enough safety so that the energy held behind it can flow again.</p>'+
+    '<p>Behind the fear of vulnerability there may be love. Behind control there may be creativity. Behind tiredness there may be a life force you haven’t felt in a long time.</p>'+
+    '<p>In the 30-minute call we’ll go together beyond the situations and the people involved in them, all the way to the words that truly describe your state. Once you say them, you feel that everything is about you, not about what happened or who did what. That’s where the root is, and that’s where the energy waiting to be released is too.</p>'+
+    '<button class="cta-btn" data-cal-link="thebecomingfield/discovery-call" data-cal-config=\'{"theme":"light"}\' style="border:none;cursor:pointer;font-family:inherit">Book the free call &rarr;</button>'+
+    '</div></div>';
+  rw.innerHTML=html;
+}
+
+render();
+</script>
+<script type="text/javascript">
+(function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if(typeof namespace === "string"){cal.ns[namespace] = cal.ns[namespace] || api;p(cal.ns[namespace], ar);p(cal, ["initNamespace", namespace]);} else p(cal, ar); return;} p(cal, ar); }; })(window, "https://app.cal.com/embed/embed.js", "init");
+Cal("init", {origin:"https://cal.com"});
+Cal("ui", {"theme":"light","styles":{"branding":{"brandColor":"#1D9E75"}},"hideEventTypeDetails":false,"layout":"month_view"});
+</script>
+</body>
+</html>
