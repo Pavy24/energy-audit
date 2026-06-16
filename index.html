@@ -314,12 +314,17 @@ function showResults(){
     '<p>Nu e vorba sa distrugi ceva, sa te repari sau sa te vindeci. E vorba sa vezi ce a incercat sa te protejeze, sa ii intelegi rolul si sa creezi suficienta siguranta incat energia blocata in spatele lui sa poata curge din nou.</p>'+
     '<p>In spatele fricii de vulnerabilitate poate fi iubire. In spatele controlului poate fi creativitate. In spatele oboselii poate fi o forta vitala pe care nu ai mai simtit-o de mult.</p>'+
     '<p>In convorbirea de 30 de minute vom merge impreuna dincolo de situatii si de oamenii implicati in ele, pana la cuvintele care descrie cu adevarat starea ta. O data ce le spui, simti ca totul e despre tine, nu despre ce s-a intamplat sau cine a facut ce. Acolo e radacina si acolo e si energia care asteapta sa fie eliberata.</p>'+
-    '<a class="cta-btn" href="https://thebecomingfield.com" target="_blank">Rezerva convorbirea gratuita &rarr;</a>'+
+    '<button class="cta-btn" data-cal-link="thebecomingfield/discovery-call" data-cal-config='{"theme":"light"}' style="border:none;cursor:pointer;font-family:inherit">Rezerva convorbirea gratuita &rarr;</button>'+
     '</div></div>';
   rw.innerHTML=html;
 }
 
 render();
+</script>
+<script type="text/javascript">
+(function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if(typeof namespace === "string"){cal.ns[namespace] = cal.ns[namespace] || api;p(cal.ns[namespace], ar);p(cal, ["initNamespace", namespace]);} else p(cal, ar); return;} p(cal, ar); }; })(window, "https://app.cal.com/embed/embed.js", "init");
+Cal("init", {origin:"https://cal.com"});
+Cal("ui", {"theme":"light","styles":{"branding":{"brandColor":"#1D9E75"}},"hideEventTypeDetails":false,"layout":"month_view"});
 </script>
 </body>
 </html>
